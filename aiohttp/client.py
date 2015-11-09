@@ -475,13 +475,19 @@ class _BaseRequestContextManager(base):
 
     @asyncio.coroutine
     def __iter__(self):
-        resp = yield from self._coro
-        return resp
+        try:
+            resp = yield from self._coro
+            return resp
+        finally:
+            self._coro.close()
 
     if PY_35:
         def __await__(self):
-            resp = yield from self._coro
-            return resp
+            try:
+                resp = yield from self._coro
+                return resp
+            finally:
+                self._coro.close()
 
         @asyncio.coroutine
         def __aenter__(self):
@@ -522,6 +528,10 @@ class _DetachedRequestContextManager(_RequestContextManager):
         super().__init__(coro)
         self._session = session
 
+    def close(self):
+        super().close()
+        self._session.detach()
+
     def __del__(self):
         self._session.detach()
 
@@ -533,6 +543,10 @@ class _DetachedWSRequestContextManager(_WSRequestContextManager):
     def __init__(self, coro, session):
         super().__init__(coro)
         self._session = session
+
+    def close(self):
+        super().close()
+        self._session.detach()
 
     def __del__(self):
         self._session.detach()
