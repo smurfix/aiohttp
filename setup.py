@@ -58,7 +58,7 @@ install_requires = ['chardet']
 if sys.version_info < (3, 4):
     install_requires += ['asyncio', 'enum34']
 
-tests_require = install_requires + ['nose', 'gunicorn']
+tests_require = install_requires + ['nose']
 
 
 def read(f):
