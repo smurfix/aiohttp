@@ -1,0 +1,6 @@
+/files
+/*.debhelper
+/*.log
+/python3-aiohttp-dbg
+/python3-aiohttp
+/*.substvars

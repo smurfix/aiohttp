@@ -1,3 +1,9 @@
+python-aiohttp (0.18.4+git1-131d69f88-3) smurf; urgency=medium
+
+  * check in debian/.gitignore
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 21 Nov 2015 19:19:40 +0100
+
 python-aiohttp (0.18.4+git1-131d69f88-2) smurf; urgency=medium
 
   * ignore built files
