@@ -41,4 +41,5 @@ virtualenv.py
 aiohttp/_websocket.c
 aiohttp/_websocket.html
 .install-deps
-.develop
+.develop/.pybuild
+/.pybuild
