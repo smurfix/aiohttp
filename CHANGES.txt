@@ -1,87 +1,100 @@
 CHANGES
 =======
 
-0.17.4 (09-29-2015)
+0.18.4 (13-11-2015)
 -------------------
+
+- Relax rule for router names again by adding dash to allowed
+  characters: they may contain identifiers, dashes, dots and columns
+
+
+0.18.3 (25-10-2015)
+-------------------
+
+- Fix formatting for _RequestContextManager helper #590 
+
+0.18.2 (22-10-2015)
+-------------------
+
+- Fix regression for OpenSSL < 1.0.0 #583
+
+0.18.1 (20-10-2015)
+-------------------
+
+- Relax rule for router names: they may contain dots and columns
+  starting from now
+
+0.18.0 (19-10-2015)
+-------------------
+
+- Use errors.HttpProcessingError.message as HTTP error reason and
+  message #459
+
+- Optimize cythonized multidict a bit
+
+- Change repr's of multidicts and multidict views
+
+- default headers in ClientSession are now case-insensitive
+
+- Make '=' char and 'wss://' schema safe in urls #477
+
+- `ClientResponse.close()` forces connection closing by default from now #479
+  N.B. Backward incompatible change: was `.close(force=False)
+  Using `force` parameter for the method is deprecated: use `.release()` instead.
+
+- Properly requote URL's path #480
+
+- add `skip_auto_headers` parameter for client API #486
 
 - Properly parse URL path in aiohttp.web.Request #489
 
-- Add missing coroutine decorator, the client api is await-compatible now
+- Raise RuntimeError when chunked enabled and HTTP is 1.0 #488
 
-0.17.3 (08-28-2015)
----------------------
+- Fix a bug with processing io.BytesIO as data parameter for client API #500
 
-- Remove Content-Length header on compressed responses #450
+- Skip auto-generation of Content-Type header #507
 
-- Support Python 3.5
+- Use sendfile facility for static file handling #503
 
-- Improve performance of transport in-use list #472
+- Default `response_factory` in `app.router.add_static` now is
+  `StreamResponse`, not `None`. The functionality is not changed if
+  default is not specified.
 
-- Fix connection pooling #473
+- Drop `ClientResponse.message` attribute, it was always implementation detail.
 
-0.17.2 (08-11-2015)
----------------------
+- Streams are optimized for speed and mostly memory in case of a big
+  HTTP message sizes #496
 
-- Don't forget to pass `data` argument forward #462
+- Fix a bug for server-side cookies for dropping cookie and setting it
+  again without Max-Age parameter.
 
-- Fix multipart read bytes count #463
+- Don't trim redirect URL in client API #499
 
-0.17.1 (08-10-2015)
----------------------
+- Extend precision of access log "D" to milliseconds #527
 
-- Fix multidict comparsion to arbitrary abc.Mapping
+- Deprecate `StreamResponse.start()` method in favor of
+  `StreamResponse.prepare()` coroutine #525
 
-0.17.0 (08-04-2015)
----------------------
+  `.start()` is still supported but responses begun with `.start()`
+  doesn't call signal for response preparing to be sent. 
 
-- Make StaticRoute support Last-Modified and If-Modified-Since headers #386
+- Add `StreamReader.__repr__`
 
-- Add Request.if_modified_since and Stream.Response.last_modified properties
+- Drop Python 3.3 support, from now minimal required version is Python
+  3.4.1 #541
 
-- Fix deflate compression when writing a chunked response #395
+- Add `async with` support for `ClientSession.request()` and family #536
 
-- Request`s content-length header is cleared now after redirect from
-  POST method #391
+- Ignore message body on 204 and 304 responses #505
 
-- Return a 400 if server received a non HTTP content #405
+- `TCPConnector` processed both IPv4 and IPv6 by default #559
 
-- Fix keep-alive support for aiohttp clients #406
+- Add `.routes()` view for urldispatcher #519
 
-- Allow gzip compression in high-level server response interface #403
+- Route name should be a valid identifier name from now #567
 
-- Rename TCPConnector.resolve and family to dns_cache #415
+- Implement server signals #562
 
-- Make UrlDispatcher ignore quoted characters during url matching #414
-  Backward-compatibility warning: this may change the url matched by
-  your queries if they send quoted character (like %2F for /) #414
+- Drop an year-old deprecated *files* parameter from client API.
 
-- Use optional cchardet accelerator if present #418
-
-- Borrow loop from Connector in ClientSession if loop is not set
-
-- Add context manager support to ClientSession for session closing.
-
-- Add toplevel get(), post(), put(), head(), delete(), options(),
-  patch() coroutines.
-
-- Fix IPv6 support for client API #425
-
-- Pass SSL context through proxy connector #421
-
-- Make the rule: path for add_route should start with slash
-
-- Don't process request finishing by low-level server on closed event loop
-
-- Don't override data if multiple files are uploaded with same key #433
-
-- Ensure multipart.BodyPartReader.read_chunk read all the necessary data
-  to avoid false assertions about malformed multipart payload
-
-- Dont sent body for  204, 205 and 304 http exceptions #442
-
-- Correctly skip Cython compilation in MSVC not found #453
-
-- Add response factory to StaticRoute #456
-
-- Don't append trailing CRLF for multipart.BodyPartReader #454
-
+- Added `async for` support for aiohttp stream #542

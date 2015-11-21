@@ -1,26 +1,33 @@
+sudo: no
+
 language: python
 python:
-  - 3.3
   - 3.4
+  - 3.5
+
+cache:
+  directories:
+  - $HOME/.cache/pip
+before_cache:
+  - rm -f $HOME/.cache/pip/log/debug.log
 
 install:
   - pip install --upgrade setuptools
-  - pip install cython
-  - pip install flake8
-  - pip install docutils
-  - pip install coverage
-  - pip install gunicorn
-  - pip install pygments
-  - python setup.py develop
+  - pip install -r requirements-dev.txt
 
 script:
-  - flake8 aiohttp examples tests
+  - flake8 aiohttp
+  - if python -c "import sys; sys.exit(sys.version_info < (3,5))"; then
+        flake8 examples tests;
+    fi
   - coverage run --source=aiohttp setup.py test
   - python setup.py check -rm
 
 env:
   matrix:
-    - PYTHONASYNCIODEBUG=1 AIOHTTP_NO_EXTENSIONS=0
-    - PYTHONASYNCIODEBUG=0 AIOHTTP_NO_EXTENSIONS=0
-    - PYTHONASYNCIODEBUG=1 AIOHTTP_NO_EXTENSIONS=1
-    - PYTHONASYNCIODEBUG=0 AIOHTTP_NO_EXTENSIONS=1
+    # PYTHONASYNCIODEBUG and AIOHTTP_NO_EXTENSIONS environment variables
+    # are considered as enabled if they are any non empty strings.
+    - PYTHONASYNCIODEBUG=X AIOHTTP_NO_EXTENSIONS=
+    - PYTHONASYNCIODEBUG=  AIOHTTP_NO_EXTENSIONS=
+    - PYTHONASYNCIODEBUG=X AIOHTTP_NO_EXTENSIONS=X
+    - PYTHONASYNCIODEBUG=  AIOHTTP_NO_EXTENSIONS=X

@@ -5,8 +5,8 @@ HTTP Client Reference
 
 .. highlight:: python
 
-.. module:: aiohttp.client
-
+.. module:: aiohttp
+.. currentmodule:: aiohttp
 
 
 Client Session
@@ -19,29 +19,24 @@ supports keepalives by default.
 
 Usage example::
 
-     >>> import aiohttp
-     >>> session = aiohttp.ClientSession()
-     >>> resp = yield from session.get('http://python.org')
-     >>> resp
-     <ClientResponse(python.org/) [200]>
-     >>> data = yield from resp.read()
-     >>> session.close()
+     import aiohttp
+     import asyncio
 
-.. versionadded:: 0.15.2
+     async def fetch(client):
+         async with client.get('http://python.org') as resp:
+         assert resp.status == 200
+         print(await resp.text())
 
-The client session supports context manager protocol for self closing::
-
-    >>> with aiohttp.ClientSession() as session:
-    >>>     resp = yield from session.get('http://python.org')
-    >>>     yield from resp.release()
-    >>> session.closed
-    True
+     with aiohttp.ClientSession() as client:
+         asyncio.get_event_loop().run_until_complete(fetch(client))
 
 .. versionadded:: 0.17
 
+The client session supports context manager protocol for self closing.
 
 .. class:: ClientSession(*, connector=None, loop=None, cookies=None,\
-                         headers=None, auth=None, request_class=ClientRequest,\
+                         headers=None, skip_auto_headers=None, \
+                         auth=None, request_class=ClientRequest,\
                          response_class=ClientResponse, \
                          ws_response_class=ClientWebSocketResponse)
 
@@ -61,8 +56,24 @@ The client session supports context manager protocol for self closing::
 
    :param dict cookies: Cookies to send with the request (optional)
 
-   :param dict headers: HTTP Headers to send with
-                        the request (optional)
+   :param headers: HTTP Headers to send with
+                   the request (optional).
+
+                   May be either *iterable of key-value pairs* or
+                   :class:`~collections.abc.Mapping`
+                   (e.g. :class:`dict`,
+                   :class:`~aiohttp.CIMultiDict`).
+
+   :param skip_auto_headers: set of headers for which autogeneration
+      should be skipped.
+
+      *aiohttp* autogenerates headers like ``User-Agent`` or
+      ``Content-Type`` if these headers are not explicitly
+      passed. Using ``skip_auto_headers`` parameter allows to skip
+      that generation. Note that ``Content-Length`` autogeneration can't
+      be skipped.
+
+      Iterable of :class:`str` or :class:`~aiohttp.upstr` (optional)
 
    :param aiohttp.helpers.BasicAuth auth: BasicAuth named tuple that represents
                                           HTTP Basic Authorization (optional)
@@ -70,7 +81,8 @@ The client session supports context manager protocol for self closing::
    :param request_class: Request class implementation. ``ClientRequest`` by
                          default.
 
-   :param response_class: Response class implementation. ``ClientResponse`` by
+   :param response_class: Response class
+                          implementation. :class:`ClientResponse` by
                           default.
 
    :param ws_response_class: WebSocketResponse class implementation.
@@ -82,7 +94,7 @@ The client session supports context manager protocol for self closing::
       *request_class* default changed from ``None`` to ``ClientRequest``
 
    .. versionchanged:: 0.16
-      *response_class* default changed from ``None`` to ``ClientResponse``
+      *response_class* default changed from ``None`` to :class:`ClientResponse`
 
    .. attribute:: closed
 
@@ -106,13 +118,14 @@ The client session supports context manager protocol for self closing::
 
 
    .. coroutinemethod:: request(method, url, *, params=None, data=None,\
-                                headers=None, auth=None, allow_redirects=True,\
+                                headers=None, skip_auto_headers=None, \
+                                auth=None, allow_redirects=True,\
                                 max_redirects=10, encoding='utf-8',\
                                 version=HttpVersion(major=1, minor=1),\
                                 compress=None, chunked=None, expect100=False,\
                                 read_until_eof=True)
 
-      Performs an asynchronous http request. Returns a response object.
+      Performs an asynchronous HTTP request. Returns a response object.
 
 
       :param str method: HTTP method
@@ -128,6 +141,17 @@ The client session supports context manager protocol for self closing::
       :param dict headers: HTTP Headers to send with
                            the request (optional)
 
+      :param skip_auto_headers: set of headers for which autogeneration
+         should be skipped.
+
+         *aiohttp* autogenerates headers like ``User-Agent`` or
+         ``Content-Type`` if these headers are not explicitly
+         passed. Using ``skip_auto_headers`` parameter allows to skip
+         that generation.
+
+         Iterable of :class:`str` or :class:`~aiohttp.upstr`
+         (optional)
+
       :param aiohttp.helpers.BasicAuth auth: BasicAuth named tuple that
                                              represents HTTP Basic Authorization
                                              (optional)
@@ -135,7 +159,7 @@ The client session supports context manager protocol for self closing::
       :param bool allow_redirects: If set to ``False``, do not follow redirects.
                                    ``True`` by default (optional).
 
-      :param aiohttp.protocol.HttpVersion version: Request http version
+      :param aiohttp.protocol.HttpVersion version: Request HTTP version
                                                    (optional)
 
       :param bool compress: Set to ``True`` if request has to be compressed
@@ -152,6 +176,9 @@ The client session supports context manager protocol for self closing::
                                   does not have Content-Length header.
                                   ``True`` by default (optional).
 
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
+
    .. coroutinemethod:: get(url, *, allow_redirects=True, **kwargs)
 
       Perform a ``GET`` request.
@@ -165,6 +192,8 @@ The client session supports context manager protocol for self closing::
       :param bool allow_redirects: If set to ``False``, do not follow redirects.
                                    ``True`` by default (optional).
 
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
 
    .. coroutinemethod:: post(url, *, data=None, **kwargs)
 
@@ -180,6 +209,9 @@ The client session supports context manager protocol for self closing::
       :param data: Dictionary, bytes, or file-like object to
                    send in the body of the request (optional)
 
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
+
    .. coroutinemethod:: put(url, *, data=None, **kwargs)
 
       Perform a ``PUT`` request.
@@ -194,6 +226,9 @@ The client session supports context manager protocol for self closing::
       :param data: Dictionary, bytes, or file-like object to
                    send in the body of the request (optional)
 
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
+
    .. coroutinemethod:: delete(url, **kwargs)
 
       Perform a ``DELETE`` request.
@@ -203,6 +238,9 @@ The client session supports context manager protocol for self closing::
       parameters, provide `kwargs`.
 
       :param str url: Request URL
+
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
 
    .. coroutinemethod:: head(url, *, allow_redirects=False, **kwargs)
 
@@ -216,6 +254,9 @@ The client session supports context manager protocol for self closing::
 
       :param bool allow_redirects: If set to ``False``, do not follow redirects.
                                    ``False`` by default (optional).
+
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
 
    .. coroutinemethod:: options(url, *, allow_redirects=True, **kwargs)
 
@@ -231,6 +272,9 @@ The client session supports context manager protocol for self closing::
       :param bool allow_redirects: If set to ``False``, do not follow redirects.
                                    ``True`` by default (optional).
 
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
+
    .. coroutinemethod:: patch(url, *, data=None, **kwargs)
 
       Perform a ``PATCH`` request.
@@ -245,7 +289,11 @@ The client session supports context manager protocol for self closing::
                    send in the body of the request (optional)
 
 
-   .. coroutinemethod:: ws_connect(url, *, protocols=(), timeout=10.0\
+      :return ClientResponse: a :class:`client response
+                              <ClientResponse>` object.
+
+   .. coroutinemethod:: ws_connect(url, *, protocols=(), timeout=10.0,\
+                                   auth=None,\
                                    autoclose=True, autoping=True)
 
       Create a websocket connection. Returns a
@@ -257,6 +305,10 @@ The client session supports context manager protocol for self closing::
 
       :param float timeout: Timeout for websocket read. 10 seconds by default
 
+      :param aiohttp.helpers.BasicAuth auth: BasicAuth named tuple that
+                                             represents HTTP Basic Authorization
+                                             (optional)
+
       :param bool autoclose: Automatically close websocket connection on close
                              message from server. If `autoclose` is False
                              them close procedure has to be handled manually
@@ -265,6 +317,12 @@ The client session supports context manager protocol for self closing::
                             message from server
 
       .. versionadded:: 0.16
+
+         Add :meth:`ws_connect`.
+
+      .. versionadded:: 0.18
+
+         Add *auth* parameter.
 
    .. method:: close()
 
@@ -292,7 +350,7 @@ certification chaining.
 
 
 .. coroutinefunction:: request(method, url, *, params=None, data=None, \
-                       headers=None, cookies=None, files=None, auth=None, \
+                       headers=None, cookies=None, auth=None, \
                        allow_redirects=True, max_redirects=10, \
                        encoding='utf-8', \
                        version=HttpVersion(major=1, minor=1), \
@@ -301,7 +359,7 @@ certification chaining.
                        read_until_eof=True, request_class=None,\
                        response_class=None)
 
-   Perform an asynchronous http request. Return a response object
+   Perform an asynchronous HTTP request. Return a response object
    (:class:`ClientResponse` or derived from).
 
    :param str method: HTTP method
@@ -325,7 +383,7 @@ certification chaining.
    :param bool allow_redirects: If set to ``False``, do not follow redirects.
                                 ``True`` by default (optional).
 
-   :param aiohttp.protocol.HttpVersion version: Request http version (optional)
+   :param aiohttp.protocol.HttpVersion version: Request HTTP version (optional)
 
    :param bool compress: Set to ``True`` if request has to be compressed
                          with deflate encoding.
@@ -356,13 +414,16 @@ certification chaining.
                 (optional)
 
 
+   :return ClientResponse: a :class:`client response <ClientResponse>` object.
+
 Usage::
 
-     >>> import aiohttp
-     >>> resp = yield from aiohttp.request('GET', 'http://python.org/')
-     >>> resp
-     <ClientResponse(python.org/) [200]>
-     >>> data = yield from resp.read()
+     import aiohttp
+
+     async def fetch():
+         async with aiohttp.request('GET', 'http://python.org/') as resp:
+             assert resp.status == 200
+             print(await resp.text())
 
 
 .. coroutinefunction:: get(url, **kwargs)
@@ -444,8 +505,6 @@ Usage::
 
 Connectors
 ----------
-
-.. module:: aiohttp.connector
 
 Connectors are transports for aiohttp client API.
 
@@ -560,8 +619,9 @@ BaseConnector
 TCPConnector
 ^^^^^^^^^^^^
 
-.. class:: TCPConnector(*, verify_ssl=True, fingerprint=None, use_dns_cache=False, \
-                        family=socket.AF_INET, \
+.. class:: TCPConnector(*, verify_ssl=True, fingerprint=None,\
+                        use_dns_cache=False, \
+                        family=0, \
                         ssl_context=None, conn_timeout=None, \
                         keepalive_timeout=30, limit=None, share_cookies=False, \
                         force_close=False, loop=None)
@@ -601,8 +661,16 @@ TCPConnector
 
       .. deprecated:: 0.17
 
-   :param int family: TCP socket family, ``AF_INET`` by default
-                      (*IPv4*). For *IPv6* use ``AF_INET6``.
+   :param int family: TCP socket family, both IPv4 and IPv6 by default.
+                      For *IPv4* only use :const:`socket.AF_INET`,
+                      for  *IPv6* only -- :const:`socket.AF_INET6`.
+
+      .. versionchanged:: 0.18
+
+         *family* is `0` by default, that means both IPv4 and IPv6 are
+         accepted. To specify only concrete version please pass
+         :const:`socket.AF_INET` or :const:`socket.AF_INET6`
+         explicitly.
 
    :param ssl.SSLContext ssl_context: ssl context used for processing
       *HTTPS* requests (optional).
@@ -701,9 +769,10 @@ ProxyConnector
 
    Usage::
 
-      >>> conn = ProxyConnector(proxy="http://some.proxy.com")
-      >>> session = ClientSession(connector=conn)
-      >>> resp = yield from session.get('http://python.org')
+      conn == ProxyConnector(proxy="http://some.proxy.com")
+      session = ClientSession(connector=conn)
+      async with session.get('http://python.org') as resp:
+          assert resp.status == 200
 
    Constructor accepts all parameters suitable for
    :class:`TCPConnector` plus several proxy-specific ones:
@@ -757,9 +826,10 @@ UnixConnector
 
     Usage::
 
-       >>> conn = UnixConnector(path='/path/to/socket')
-       >>> session = ClientSession(connector=conn)
-       >>> resp = yield from session.get('http://python.org')
+       conn = UnixConnector(path='/path/to/socket')
+       session = ClientSession(connector=conn)
+       async with session.get('http://python.org') as resp:
+           ...
 
    Constructor accepts all parameters suitable for
    :class:`BaseConnector` plus UNIX-specific one:
@@ -809,5 +879,122 @@ Connection
 
       Underlying socket is not closed, next :meth:`close` or
       :meth:`release` calls don't return socket to free pool.
+
+
+Response object
+---------------
+
+.. class:: ClientResponse
+
+   Client response returned be :meth:`ClientSession.request` and family.
+
+   User never creates the instance of ClientResponse class but gets it
+   from API calls.
+
+   :class:`ClientResponse` supports async context manager protocol, e.g.::
+
+       resp = await client_session.get(url)
+       async with resp:
+           assert resp.status == 200
+
+   After exiting from ``async with`` block response object will be
+   *released* (see :meth:`release` coroutine).
+
+   .. versionadded:: 0.18
+
+      Support for ``async with``.
+
+   .. attribute:: version
+
+      Response's version, :class:`HttpVersion` instance.
+
+   .. attribute:: status
+
+      HTTP status code of response (:class:`int`), e.g. ``200``.
+
+   .. attribute:: reason
+
+      HTTP status reason of response (:class:`str`), e.g. ``"OK"``.
+
+   .. attribute:: connection
+
+      :class:`Connection` used for handling response.
+
+   .. attribute:: content
+
+      Payload stream, contains response's BODY (:class:`StreamReader`
+      compatible instance, most likely
+      :class:`FlowControlStreamReader` one).
+
+   .. attribute:: cookies
+
+      HTTP cookies of response (*Set-Cookie* HTTP header,
+      :class:`~http.cookies.SimpleCookie`).
+
+   .. attribute:: headers
+
+      HTTP headers of response, :class:`CIMultiDictProxy`.
+
+   .. method:: close()
+
+      Close response and underlying connection.
+
+      For :term:`keep-alive` support see :meth:`release`.
+
+   .. coroutinemethod:: read()
+
+      Read the whole response's body as :class:`bytes`.
+
+      Close underlying connection if data reading gets an error,
+      release connection otherwise.
+
+      :return bytes: read *BODY*.
+
+      .. seealso:: :meth:`close`, :meth:`release`.
+
+   .. coroutinemethod:: release()
+
+      Finish response processing, release underlying connection and
+      return it into free connection pool for reusage by next upcoming
+      request.
+
+   .. coroutinemethod:: text(encoding=None)
+
+      Read response's body and return decoded :class:`str` using
+      specified *encoding* parameter.
+
+      If *encoding* is ``None`` content encoding is autocalculated
+      using :term:`cchardet` or :term:`chardet` as fallback if
+      *cchardet* is not awailable.
+
+      Close underlying connection if data reading gets an error,
+      release connection otherwise.
+
+      :param str encoding: text encoding used for *BODY* decoding, or
+                           ``None`` for encoding autodetection
+                           (default).
+
+      :return str: decoded *BODY*
+
+   .. coroutinemethod:: json(encoding=None)
+
+      Read response's body as *JSON*, return :class:`dict` using
+      specified *encoding* and *loader*.
+
+      If *encoding* is ``None`` content encoding is autocalculated
+      using :term:`cchardet` or :term:`chardet` as fallback if
+      *cchardet* is not awailable.
+
+      Close underlying connection if data reading gets an error,
+      release connection otherwise.
+
+      :param str encoding: text encoding used for *BODY* decoding, or
+                           ``None`` for encoding autodetection
+                           (default).
+
+      :param callable loads: :func:`callable` used for loading *JSON*
+                             data, :func:`json.loads` by default.
+
+      :return dict: *BODY* as *JSON* data.
 
 .. disqus::

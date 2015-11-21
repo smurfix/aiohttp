@@ -24,8 +24,7 @@ and returns :class:`Response` instance::
    import asyncio
    from aiohttp import web
 
-   @asyncio.coroutine
-   def hello(request):
+   async def hello(request):
        return web.Response(body=b"Hello, world")
 
 Next, you have to create a :class:`Application` instance and register
@@ -65,7 +64,7 @@ Handler is an any :term:`callable` that accepts a single
 derived (e.g. :class:`Response`) instance.
 
 Handler **may** be a :ref:`coroutine<coroutine>`, :mod:`aiohttp.web` will
-**unyield** returned result by applying ``yield from`` to the handler.
+**unyield** returned result by applying ``await`` to the handler.
 
 Handlers are connected to the :class:`Application` via routes::
 
@@ -84,8 +83,7 @@ You can also use *variable routes*. If route contains strings like
 Parsed *path part* will be available in the *request handler* as
 ``request.match_info['name']``::
 
-   @asyncio.coroutine
-   def variable_handler(request):
+   async def variable_handler(request):
        return web.Response(
            text="Hello, {}".format(request.match_info['name']))
 
@@ -116,7 +114,7 @@ Routes may have a *name*::
 
 In web-handler you may build *URL* for that route::
 
-   >>> request.app.router['root'].url(query="?a=b&c=d")
+   >>> request.app.router['root'].url(query={"a": "b", "c": "d"})
    '/root?a=b&c=d'
 
 More interesting example is building *URL* for :ref:`variable
@@ -139,8 +137,7 @@ Using plain coroutines and classes for web-handlers
 
 Handlers *may* be first-class functions, e.g.::
 
-   @asyncio.coroutine
-   def hello(request):
+   async def hello(request):
        return web.Response(body=b"Hello, world")
 
    app.router.add_route('GET', '/', hello)
@@ -159,8 +156,7 @@ so application developer can use classes if he wants::
        def handle_intro(self, request):
            return web.Response(body=b"Hello, world")
 
-       @asyncio.coroutine
-       def handle_greeting(self, request):
+       async def handle_greeting(self, request):
            name = request.match_info.get('name', "Anonymous")
            txt = "Hello, {}".format(name)
            return web.Response(text=txt)
@@ -177,6 +173,25 @@ so application developer can use classes if he wants::
        app.router.add_route('*', '/path', handler)
 
    That means the handler for ``'/path'`` is applied for every HTTP method.
+
+
+Route views
+-----------
+
+.. versionadded:: 0.18
+
+For look on *all* routes in the router you may use
+:meth:`UrlDispatcher.routes` method.
+
+You can iterate over routes in the router table::
+
+   for route in app.router.routes():
+       print(route)
+
+or get router table size::
+
+   len(app.router.routes())
+
 
 
 Custom conditions for routes lookup
@@ -198,24 +213,21 @@ The next example shows custom processing based on *HTTP Accept* header:
        def __init__(self):
            self._accepts = {}
 
-       @asyncio.coroutine
-       def do_route(self, request):
+       async def do_route(self, request):
            for accept in request.headers.getall('ACCEPT', []):
                 acceptor = self._accepts.get(accept):
                 if acceptor is not None:
-                    return (yield from acceptor(request))
+                    return (await acceptor(request))
            raise HTTPNotAcceptable()
 
        def reg_acceptor(self, accept, handler):
            self._accepts[accept] = handler
 
 
-   @asyncio.coroutine
-   def handle_json(request):
+   async def handle_json(request):
        # do json handling
 
-   @asyncio.coroutine
-   def handle_xml(request):
+   async def handle_xml(request):
        # do xml handling
 
    chooser = AcceptChooser()
@@ -272,18 +284,16 @@ usually called *session*.
     from aiohttp_session import get_session, session_middleware
     from aiohttp_session.cookie_storage import EncryptedCookieStorage
 
-    @asyncio.coroutine
-    def handler(request):
-        session = yield from get_session(request)
+    async def handler(request):
+        session = await get_session(request)
         session['last_visit'] = time.time()
         return web.Response(body=b'OK')
 
-    @asyncio.coroutine
-    def init(loop):
+    async def init(loop):
         app = web.Application(middlewares=[session_middleware(
             EncryptedCookieStorage(b'Sixteen byte key'))])
         app.router.add_route('GET', '/', handler)
-        srv = yield from loop.create_server(
+        srv = await loop.create_server(
             app.make_handler(), '0.0.0.0', 8080)
         return srv
 
@@ -316,8 +326,7 @@ This example shows custom handler for *Except* header:
 
 .. code-block:: python
 
-   @asyncio.coroutine
-   def check_auth(request):
+   async def check_auth(request):
        if request.version != aiohttp.HttpVersion11:
            return
 
@@ -326,8 +335,7 @@ This example shows custom handler for *Except* header:
 
        request.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
 
-   @asyncio.coroutine
-   def hello(request):
+   async def hello(request):
        return web.Response(body=b"Hello, world")
 
    app = web.Application()
@@ -368,10 +376,9 @@ use those to read a file's name and a content:
 
 .. code-block:: python
 
-    @asyncio.coroutine
-    def store_mp3_view(request):
+    async def store_mp3_view(request):
 
-        data = yield from request.post()
+        data = await request.post()
 
         # filename contains the name of the file in string format.
         filename = data['mp3'].filename
@@ -403,32 +410,31 @@ using response's methods:
 
 .. code-block:: python
 
-    @asyncio.coroutine
-    def websocket_handler(request):
+    async def websocket_handler(request):
 
         ws = web.WebSocketResponse()
-        ws.start(request)
+        await ws.prepare(request)
 
-        while True:
-            msg = yield from ws.receive()
+        while not ws.closed:
+            msg = await ws.receive()
 
             if msg.tp == aiohttp.MsgType.text:
                 if msg.data == 'close':
-                    yield from ws.close()
+                    await ws.close()
                 else:
                     ws.send_str(msg.data + '/answer')
             elif msg.tp == aiohttp.MsgType.close:
                 print('websocket connection closed')
             elif msg.tp == aiohttp.MsgType.error:
-                print('ws connection closed with exception %s',
+                print('ws connection closed with exception %s' %
                       ws.exception())
 
         return ws
 
-You **must** use the only websocket task for both reading (e.g ``yield
-from ws.receive()``) and writing but may have multiple writer tasks
-which can only send data asynchronously (by ``yield from
-ws.send_str('data')`` for example).
+You **must** use the only websocket task for both reading (e.g ``await
+ws.receive()``) and writing but may have multiple writer tasks which
+can only send data asynchronously (by ``ws.send_str('data')`` for
+example).
 
 
 .. _aiohttp-web-exceptions:
@@ -446,14 +452,12 @@ either return exception object from :ref:`aiohttp-web-handler` or raise it.
 
 The following snippets are the same::
 
-    @asyncio.coroutine
-    def handler(request):
+    async def handler(request):
         return aiohttp.web.HTTPFound('/redirect')
 
 and::
 
-    @asyncio.coroutine
-    def handler(request):
+    async def handler(request):
         raise aiohttp.web.HTTPFound('/redirect')
 
 
@@ -509,7 +513,7 @@ HTTP Exception hierarchy chart::
            * 504 - HTTPGatewayTimeout
            * 505 - HTTPVersionNotSupported
 
-All http exceptions have the same constructor::
+All HTTP exceptions have the same constructor::
 
     HTTPNotFound(*, headers=None, reason=None,
                  body=None, text=None, content_type=None)
@@ -548,16 +552,14 @@ parameter, which should be a sequence of *middleware factories*, e.g::
 
 The most trivial *middleware factory* example::
 
-    @asyncio.coroutine
-    def middleware_factory(app, handler):
-        @asyncio.coroutine
-        def middleware(request):
-            return (yield from handler(request))
+    async def middleware_factory(app, handler):
+        async def middleware(request):
+            return await handler(request)
         return middleware
 
 Every factory is a coroutine that accepts two parameters: *app*
 (:class:`Application` instance) and *handler* (next handler in
-middleware chain.
+middleware chain).
 
 The last handler is :ref:`web-handler<aiohttp-web-handler>` selected
 by routing itself (:meth:`~UrlDispatcher.resolve` call).
@@ -567,7 +569,7 @@ parameter. Signature of returned handler should be the same as for
 :ref:`web-handler<aiohttp-web-handler>`: accept single *request*
 parameter, return *response* or raise exception.
 
-The factory is a coroutine, thus it can do extra ``yield from`` calls
+The factory is a coroutine, thus it can do extra ``await`` calls
 on making new handler, e.g. call database etc.
 
 After constructing outermost handler by applying middleware chain to
@@ -585,6 +587,42 @@ some pre- and post- processing like handling *CORS* and so on.
 
    Middleware accepts route exceptions (:exc:`HTTPNotFound` and
    :exc:`HTTPMethodNotAllowed`).
+
+
+.. _aiohttp-web-signals:
+
+Signals
+-------
+
+.. versionadded:: 0.18
+
+While :ref:`midlewares <aiohttp-web-middlewares>` gives very powerful
+tool for customizing :ref:`web handler<aiohttp-web-handler>`
+processing we need another machinery also called signals.
+
+For example middleware may change HTTP headers for *unprepared* response only
+(see :meth:`aiohttp.web.StreamResponse.prepare`).
+
+But sometimes we need a hook for changing HTTP headers for streamed
+responses and websockets. That can be done by subsribing on
+:attr:`aiohttp.web.Application.on_response_prepare` signal::
+
+   async def on_prepare(request, response):
+       response.headers['My-Header'] = 'value'
+
+Signal handlers should not return a value but may modify incoming
+mutable parameters.
+
+
+.. warning::
+
+   Signals has provisional status.
+
+   That means API may be changed in future releases.
+
+   Most likely signal subscription/sending will be the same but signal
+   object creation is subject for changing.  Unless you don't create
+   new signals but reuse existing only you are not affected.
 
 
 Debug toolbar

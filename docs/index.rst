@@ -18,7 +18,8 @@ Features
 - Supports both :ref:`aiohttp-client` and :ref:`HTTP Server <aiohttp-web>`.
 - Supports both :ref:`Server WebSockets <aiohttp-web-websockets>` and
   :ref:`Client WebSockets <aiohttp-client-websockets>` out-of-the-box.
-- Web-server has :ref:`aiohttp-web-middlewares` and pluggable routing.
+- Web-server has :ref:`aiohttp-web-middlewares`,
+  :ref:`aiohttp-web-signals` and pluggable routing.
 
 Library Installation
 --------------------
@@ -40,35 +41,33 @@ Client example::
     import asyncio
     import aiohttp
 
-    @asyncio.coroutine
-    def fetch_page(url):
-        response = yield from aiohttp.request('GET', url)
-        assert response.status == 200
-        return (yield from response.read())
+    await def fetch_page(client, url):
+        async with client.get(url) as response:
+            assert response.status == 200
+            return await response.read()
 
-    content = asyncio.get_event_loop().run_until_complete(
-        fetch_page('http://python.org'))
+    loop = asyncio.get_event_loop()
+    client = aiohttp.ClientSession(loop=loop)
+    content = loop.run_until_complete(
+        fetch_page(client, 'http://python.org'))
     print(content)
+    client.close()
 
 Server example::
 
     import asyncio
     from aiohttp import web
 
-
-    @asyncio.coroutine
-    def handle(request):
+    async def handle(request):
         name = request.match_info.get('name', "Anonymous")
         text = "Hello, " + name
         return web.Response(body=text.encode('utf-8'))
 
-
-    @asyncio.coroutine
-    def init(loop):
+    async def init(loop):
         app = web.Application(loop=loop)
         app.router.add_route('GET', '/{name}', handle)
 
-        srv = yield from loop.create_server(app.make_handler(),
+        srv = await loop.create_server(app.make_handler(),
                                             '127.0.0.1', 8080)
         print("Server started at http://127.0.0.1:8080")
         return srv
@@ -97,12 +96,12 @@ Continuous Integration.
 Dependencies
 ------------
 
-- Python 3.3 and :term:`asyncio` or Python 3.4+
+- Python Python 3.4.1+
 - *chardet* library
 - *Optional* :term:`cchardet` library as faster replacement for
   :term:`chardet`.
 
-  Install it manually via::
+  Install it explicitly via::
 
      $ pip install cchardet
 
@@ -123,7 +122,8 @@ It's *Apache 2* licensed and freely available.
 
 Feel free to improve this package and send a pull request to GitHub_.
 
-Contents:
+Contents
+--------
 
 .. toctree::
 

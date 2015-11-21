@@ -21,8 +21,11 @@ Features
 Requirements
 ------------
 
-- Python >= 3.3
-- asyncio https://pypi.python.org/pypi/asyncio
+- Python >= 3.4.1
+- chardet https://pypi.python.org/pypi/chardet
+
+Optionally you may install cChardet library:
+https://pypi.python.org/pypi/cchardet/1.0.0
 
 
 License
@@ -61,31 +64,24 @@ To retrieve something from the web:
   import aiohttp
   import asyncio
 
-  def get_body(url):
-      response = yield from aiohttp.request('GET', url)
-      return (yield from response.read())
+  async def get_body(client, url):
+      async with client.get(url) as response:
+          return await response.read()
 
   if __name__ == '__main__':
       loop = asyncio.get_event_loop()
-      raw_html = loop.run_until_complete(get_body('http://python.org'))
+      client = aiohttp.ClientSession(loop=loop)
+      raw_html = loop.run_until_complete(get_body(client, 'http://python.org'))
       print(raw_html)
+      client.close()
 
 
-You can use the get command like this anywhere in your ``asyncio``
-powered program:
-
-.. code-block:: python
-
-  response = yield from aiohttp.request('GET', 'http://python.org')
-  body = yield from response.read()
-  print(body)
-
-If you want to use timeouts for aiohttp client side please use standard
+If you want to use timeouts for aiohttp client please use standard
 asyncio approach:
 
 .. code-block:: python
 
-   yield from asyncio.wait_for(request('GET', url), 10)
+   yield from asyncio.wait_for(client.get(url), 10)
 
 
 Server
@@ -98,21 +94,17 @@ This is simple usage example:
     import asyncio
     from aiohttp import web
 
-
-    @asyncio.coroutine
-    def handle(request):
+    async def handle(request):
         name = request.match_info.get('name', "Anonymous")
         text = "Hello, " + name
         return web.Response(body=text.encode('utf-8'))
 
-
-    @asyncio.coroutine
-    def wshandler(request):
+    async def wshandler(request):
         ws = web.WebSocketResponse()
         ws.start(request)
 
         while True:
-            msg = yield from ws.receive()
+            msg = await ws.receive()
 
             if msg.tp == web.MsgType.text:
                 ws.send_str("Hello, {}".format(msg.data))
@@ -124,13 +116,12 @@ This is simple usage example:
         return ws
 
 
-    @asyncio.coroutine
-    def init(loop):
+    async def init(loop):
         app = web.Application(loop=loop)
         app.router.add_route('GET', '/echo', wshandler)
         app.router.add_route('GET', '/{name}', handle)
 
-        srv = yield from loop.create_server(app.make_handler(),
+        srv = await loop.create_server(app.make_handler(),
                                             '127.0.0.1', 8080)
         print("Server started at http://127.0.0.1:8080")
         return srv
@@ -138,3 +129,17 @@ This is simple usage example:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init(loop))
     loop.run_forever()
+
+
+Note: examples are written for Python 3.5+ and utilize PEP-492 aka
+async/await.  If you are using Python 3.4 please replace `await` with
+`yield from` and `async def` with `@coroutine` e.g.::
+
+    async def coro(...):
+        ret = await f()
+
+shoud be replaced by::
+
+    @asyncio.coroutine
+    def coro(...):
+        ret = yield from f()
